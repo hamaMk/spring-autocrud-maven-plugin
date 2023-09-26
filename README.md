@@ -1,5 +1,7 @@
 ## Spring AutoCrud 
-Automatically generate basic CRUD API in springboot from entities
+Automatically generate basic CRUD API in springboot from entities.
+
+**Note**: This project is a work in progress
 
 
 ### Getting started
