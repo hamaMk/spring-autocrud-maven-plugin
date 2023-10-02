@@ -1,18 +1,20 @@
 package xyz.hamandishe.utils;
 
+import org.burningwave.core.classes.JavaClass;
+
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 public interface ClassGenerator {
     FileUtils fileUtils = new FileUtils();
 
-    void generate(String className);
+    void generate(JavaClass javaClass, File file);
 
-    default void save(Path filepath, List<String> classContent) {
+    default void save(Path filepath, String classContent) {
         try {
-            Files.write(filepath, classContent);
+            Files.writeString(filepath, classContent);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

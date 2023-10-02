@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,6 +18,10 @@ public class FileUtils {
 
     public static Path getProjectRoot(){
         return Paths.get(System.getProperty("user.dir"));
+    }
+
+    public static Path getSourceRoot() {
+        return Paths.get("src%smain%sjava".formatted(File.separator, File.separator));
     }
 
     public List<File> listEntities(Path root) throws IOException {
@@ -49,21 +54,39 @@ public class FileUtils {
         }
     }
 
-    public Path getProjectBasePackage() throws IOException {
-        return list(getProjectRoot(), FileType.SpringBootApplication).stream().findFirst()
-                .orElseThrow(
-                        ()->new RuntimeException("Could not find main application file (@SpringbootApplication)")
-                ).toPath();
-    }
+
 
     /**
      * Create a new package if it does not exist in the base package root
      * @param packageName The name of the package to be created
      * */
     public Path createPackage(String packageName) throws IOException {
-        Path basePackagePath = FileUtils.getProjectRoot();
+        Path basePackagePath = getSourceRoot();
         Path packagePath = basePackagePath.resolve(packageName);
         Files.createDirectories(packagePath);
         return packagePath;
+    }
+
+    public String getBasePackageName() throws IOException{
+        Path sourceRoot = getSourceRoot();
+
+        try(var pathStream = Files.walk(sourceRoot)) {
+            var packageRoot = pathStream.filter(Files::isDirectory)
+                    .filter(this::isEmptyDir)
+                    .findFirst().orElseThrow(IOException::new);
+
+            return sourceRoot.relativize(packageRoot).toString();
+        }
+    }
+
+    public boolean isEmptyDir(Path path){
+        if (Files.isDirectory(path)) {
+            try (Stream<Path> entries = Files.list(path)) {
+                return entries.findFirst().isEmpty();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return false;
     }
 }
