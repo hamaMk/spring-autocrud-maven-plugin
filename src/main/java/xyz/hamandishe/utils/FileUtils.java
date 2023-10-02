@@ -48,4 +48,22 @@ public class FileUtils {
             return true;
         }
     }
+
+    public Path getProjectBasePackage() throws IOException {
+        return list(getProjectRoot(), FileType.SpringBootApplication).stream().findFirst()
+                .orElseThrow(
+                        ()->new RuntimeException("Could not find main application file (@SpringbootApplication)")
+                ).toPath();
+    }
+
+    /**
+     * Create a new package if it does not exist in the base package root
+     * @param packageName The name of the package to be created
+     * */
+    public Path createPackage(String packageName) throws IOException {
+        Path basePackagePath = FileUtils.getProjectRoot();
+        Path packagePath = basePackagePath.resolve(packageName);
+        Files.createDirectories(packagePath);
+        return packagePath;
+    }
 }
