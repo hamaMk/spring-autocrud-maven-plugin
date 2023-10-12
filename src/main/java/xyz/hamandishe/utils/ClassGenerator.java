@@ -8,9 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public interface ClassGenerator {
-    FileUtils fileUtils = new FileUtils();
-
-    void generate(JavaClass javaClass, File file);
+    void generate(File file);
 
     default void save(Path filepath, String classContent) {
         try {

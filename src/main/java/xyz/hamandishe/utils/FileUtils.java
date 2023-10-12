@@ -1,5 +1,6 @@
 package xyz.hamandishe.utils;
 
+import org.apache.maven.plugin.logging.Log;
 import xyz.hamandishe.constants.FileType;
 
 import java.io.File;
@@ -8,20 +9,34 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FileUtils {
     public static final int MAX_WALK_DEPTH = 50;
     public static final String JAVA_FILE_EXTENSION = ".java";
+    private static final String PACKAGE_KEYWORD = "package";
+    private static final String TERMINATOR = ";";
+    private final Log log;
+
+    public FileUtils(Log log) {
+        this.log = log;
+    }
+
+    public static String joinPackages(String... packageNames){
+        return String.join(".", packageNames);
+    }
+
+    public static Path packageToPath(String packageName){
+        return Path.of(packageName.replace(".", File.separator));
+    }
 
     public static Path getProjectRoot(){
         return Paths.get(System.getProperty("user.dir"));
     }
 
     public static Path getSourceRoot() {
-        return Paths.get("src%smain%sjava".formatted(File.separator, File.separator));
+        return Paths.get("%s%ssrc%smain%sjava".formatted(getProjectRoot(), File.separator,File.separator, File.separator));
     }
 
     public List<File> listEntities(Path root) throws IOException {
@@ -50,7 +65,8 @@ public class FileUtils {
             String data = Files.readString(filePath);
             return data.contains("@%s".formatted(fileType.name()));
         } catch (IOException e) {
-            return true;
+            log.error("Failed to check file type");
+            throw new RuntimeException();
         }
     }
 
@@ -60,33 +76,31 @@ public class FileUtils {
      * Create a new package if it does not exist in the base package root
      * @param packageName The name of the package to be created
      * */
-    public Path createPackage(String packageName) throws IOException {
-        Path basePackagePath = getSourceRoot();
-        Path packagePath = basePackagePath.resolve(packageName);
+    public Path createPackage(String packageName, Path rootPath) throws IOException {
+        log.debug("Creating new package @: %s".formatted(rootPath));
+        Path packagePath = rootPath.resolve(packageName);
         Files.createDirectories(packagePath);
         return packagePath;
     }
 
-    public String getBasePackageName() throws IOException{
-        Path sourceRoot = getSourceRoot();
-
-        try(var pathStream = Files.walk(sourceRoot)) {
-            var packageRoot = pathStream.filter(Files::isDirectory)
-                    .filter(this::isEmptyDir)
-                    .findFirst().orElseThrow(IOException::new);
-
-            return sourceRoot.relativize(packageRoot).toString();
-        }
-    }
-
-    public boolean isEmptyDir(Path path){
-        if (Files.isDirectory(path)) {
-            try (Stream<Path> entries = Files.list(path)) {
-                return entries.findFirst().isEmpty();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+    public String getProjectPackageName(Path rootPath) {
+        log.debug("Resolving project package name");
+        try {
+            List<File>  mainClass = list(rootPath, FileType.SpringBootApplication);
+            System.out.println(mainClass);
+            if(mainClass==null || mainClass.isEmpty()){
+                log.error("Main class not found");
+            }else {
+                List<String> lines = Files.readAllLines(mainClass.get(0).toPath());
+                String packageLine = lines.stream().filter(line->line.contains(PACKAGE_KEYWORD)).findFirst()
+                        .orElseThrow();
+                return packageLine.substring(
+                        packageLine.indexOf(PACKAGE_KEYWORD)+PACKAGE_KEYWORD.length(), packageLine.indexOf(TERMINATOR))
+                                .trim();
             }
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
-        return false;
+        return null;
     }
 }
